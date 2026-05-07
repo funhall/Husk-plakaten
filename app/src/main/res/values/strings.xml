@@ -15,6 +15,7 @@
     <string name="open_removed_archive">Se nedtagne plakater (%1$d)</string>
     <string name="back_to_active_posters">Tilbage til aktive plakater</string>
     <string name="menu_label">Menu</string>
+    <string name="menu_back">Tilbage</string>
     <string name="open_economy_page">Økonomi</string>
     <string name="menu_political_theme_title">Politiske farvetemaer</string>
     <string name="refresh_distances">Opdater afstande</string>

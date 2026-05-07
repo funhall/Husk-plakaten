@@ -14,6 +14,7 @@
     <string name="open_removed_archive">View removed posters (%1$d)</string>
     <string name="back_to_active_posters">Back to active posters</string>
     <string name="menu_label">Menu</string>
+    <string name="menu_back">Back</string>
     <string name="open_economy_page">Economy</string>
     <string name="menu_political_theme_title">Political color themes</string>
     <string name="refresh_distances">Refresh distances</string>
