@@ -8,9 +8,14 @@
     <string name="login_firebase_hint">Firebase is not configured yet. This login runs locally until the app is connected to Firebase.</string>
     <string name="home_title">Remember poster</string>
     <string name="home_subtitle">Save poster positions so they can be found and removed later.</string>
-    <string name="home_primary_action">Take poster photo</string>
+    <string name="home_primary_action">Take photo</string>
     <string name="home_list_title">Active posters (%1$d)</string>
     <string name="removed_list_title">Removed posters (%1$d)</string>
+    <string name="open_removed_archive">View removed posters (%1$d)</string>
+    <string name="back_to_active_posters">Back to active posters</string>
+    <string name="menu_label">Menu</string>
+    <string name="open_economy_page">Economy</string>
+    <string name="menu_political_theme_title">Political color themes</string>
     <string name="refresh_distances">Refresh distances</string>
     <string name="nearby_label">Nearby (under 50 m)</string>
     <string name="distance_meters">distance %1$d m</string>
@@ -23,6 +28,12 @@
     <string name="billing_status_active">billing: active</string>
     <string name="billing_status_inactive">billing: inactive</string>
     <string name="billing_usage_line">registered: %1$d posters · estimated cost: %2$s</string>
+    <string name="economy_title">Economy</string>
+    <string name="economy_subtitle">See estimated cost and registration totals here.</string>
+    <string name="economy_registered_count">Registered posters: %1$d</string>
+    <string name="economy_base_fee">Base fee: 500.00 kr</string>
+    <string name="economy_per_poster_fee">Per poster fee: 0.15 kr</string>
+    <string name="economy_estimated_price">Estimated price: %1$s</string>
     <string name="activate_billing_cta">Activate billing</string>
     <string name="logout_cta">Sign out</string>
     <string name="show_on_map">Show on map</string>
@@ -34,6 +45,7 @@
     <string name="error_camera_cancelled">Camera was cancelled.</string>
     <string name="error_permissions_required">Camera and location permissions are required.</string>
     <string name="error_location_unavailable">Could not fetch GPS location. Try again outdoors.</string>
+    <string name="error_location_inaccurate">GPS is too inaccurate right now. Wait a bit and try again outdoors.</string>
     <string name="error_remove_target_missing">Poster could not be found. Please try again.</string>
     <string name="error_maps_key_missing">Google Maps API key is missing. Update google_maps_key in strings.xml.</string>
     <string name="error_no_maps_app">No maps app found for navigation.</string>

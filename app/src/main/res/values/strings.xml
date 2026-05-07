@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">HuskMig</string>
-    <string name="google_maps_key">AIzaSyD-g0Nzi0mrgGVxn0WNRvMDjBftTgzDhSo</string>
+    <string name="google_maps_key">AIzaSyCof1iBZcRmVD5FJnwnIgflIZz0xglDjJI</string>
     <string name="login_title">Log ind</string>
     <string name="login_email_label">Email</string>
     <string name="login_password_label">Kodeord</string>
@@ -8,10 +8,15 @@
     <string name="login_with_google_placeholder">Log ind med Google (midlertidig)</string>
     <string name="login_firebase_hint">Firebase er ikke konfigureret endnu. Denne login er lokal indtil projektet kobles på Firebase.</string>
     <string name="home_title">Husk plakaten</string>
-    <string name="home_subtitle">Gem placering af plakater, så de kan findes og tages ned igen.</string>
-    <string name="home_primary_action">Tag billede af plakat</string>
+     <string name="home_subtitle">Gem placering af plakater, så de kan findes og tages ned igen.</string>
+    <string name="home_primary_action">Tag billede</string>
     <string name="home_list_title">Aktive plakater (%1$d)</string>
     <string name="removed_list_title">Nedtagne plakater (%1$d)</string>
+    <string name="open_removed_archive">Se nedtagne plakater (%1$d)</string>
+    <string name="back_to_active_posters">Tilbage til aktive plakater</string>
+    <string name="menu_label">Menu</string>
+    <string name="open_economy_page">Økonomi</string>
+    <string name="menu_political_theme_title">Politiske farvetemaer</string>
     <string name="refresh_distances">Opdater afstande</string>
     <string name="nearby_label">Tæt på (under 50 m)</string>
     <string name="distance_meters">afstand %1$d m</string>
@@ -24,6 +29,12 @@
     <string name="billing_status_active">betaling: aktiv</string>
     <string name="billing_status_inactive">betaling: ikke aktiv</string>
     <string name="billing_usage_line">registreret: %1$d plakater · estimeret pris: %2$s</string>
+    <string name="economy_title">Økonomi</string>
+    <string name="economy_subtitle">Her kan du se estimeret pris og registreringstal.</string>
+    <string name="economy_registered_count">Registrerede plakater: %1$d</string>
+    <string name="economy_base_fee">Grundpris: 500,00 kr</string>
+    <string name="economy_per_poster_fee">Pris pr. plakat: 0,15 kr</string>
+    <string name="economy_estimated_price">Estimeret pris: %1$s</string>
     <string name="activate_billing_cta">Aktivér betaling</string>
     <string name="logout_cta">Log ud</string>
     <string name="show_on_map">Vis på kort</string>
@@ -35,6 +46,7 @@
     <string name="error_camera_cancelled">Kamera blev annulleret.</string>
     <string name="error_permissions_required">Kamera- og lokationsadgang kræves.</string>
     <string name="error_location_unavailable">Kunne ikke hente GPS-position. Prøv igen udendørs.</string>
+    <string name="error_location_inaccurate">GPS er for upræcis lige nu. Vent lidt og prøv igen udendørs.</string>
     <string name="error_remove_target_missing">Plakaten kunne ikke findes. Prøv igen.</string>
     <string name="error_maps_key_missing">Google Maps API-nøgle mangler. Opdater google_maps_key i strings.xml.</string>
     <string name="error_no_maps_app">Ingen kortapp fundet til rutevejledning.</string>
