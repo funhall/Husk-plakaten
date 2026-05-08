@@ -32,9 +32,7 @@
       flutter: stable
       xcode: latest
       cocoapods: default
-    triggering:
-      events:
-        - manual
+ 
     scripts:
       - name: Get Flutter packages
         script: |
