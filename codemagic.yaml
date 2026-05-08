@@ -1,0 +1,26 @@
+﻿workflows:
+  android_debug:
+    name: Android Debug Build
+    max_build_duration: 60
+    environment:
+      java: 17
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+          source: true
+    scripts:
+      - name: Make Gradle wrapper executable
+        script: |
+          chmod +x ./gradlew
+      - name: Build debug APK
+        script: |
+          ./gradlew :app:assembleDebug
+      - name: Run unit tests
+        script: |
+          ./gradlew :app:testDebugUnitTest
+    artifacts:
+      - app/build/outputs/**/*.apk
+      - app/build/reports/tests/**/*
