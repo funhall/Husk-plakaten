@@ -1,9 +1,9 @@
 ﻿workflows:
-  android_debug:
-    name: Android Debug Build
+  flutter_android_debug:
+    name: Flutter Android Debug
     max_build_duration: 60
     environment:
-      java: 17
+      flutter: stable
     triggering:
       events:
         - push
@@ -12,15 +12,38 @@
           include: true
           source: true
     scripts:
-      - name: Make Gradle wrapper executable
+      - name: Get Flutter packages
         script: |
-          chmod +x ./gradlew
-      - name: Build debug APK
+          flutter pub get
+      - name: Run tests
         script: |
-          ./gradlew :app:assembleDebug
-      - name: Run unit tests
+          flutter test
+      - name: Build Android debug APK
         script: |
-          ./gradlew :app:testDebugUnitTest
+          flutter build apk --debug
     artifacts:
-      - app/build/outputs/**/*.apk
-      - app/build/reports/tests/**/*
+      - build/app/outputs/flutter-apk/*.apk
+      - test/**
+
+  flutter_ios_build_check:
+    name: Flutter iOS Build Check
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    triggering:
+      events:
+        - manual
+    scripts:
+      - name: Get Flutter packages
+        script: |
+          flutter pub get
+      - name: Install CocoaPods
+        script: |
+          cd ios && pod install && cd ..
+      - name: Build iOS without codesign
+        script: |
+          flutter build ios --release --no-codesign
+    artifacts:
+      - build/ios/iphoneos/*.app
