@@ -1,5 +1,5 @@
-# Codemagic: Kotlin Android app — debug APK til test på telefon
-# Efter push: vælg workflow "huskplakaten-android-debug" og branch backup/testet-android-2026-05-10
+# Codemagic: Kotlin Android — debug APK (schema som docs.codemagic.io/native-android)
+# Branch: backup/testet-android-2026-05-10
 
 workflows:
   huskplakaten-android-debug:
@@ -7,11 +7,13 @@ workflows:
     max_build_duration: 60
     instance_type: linux_x2
     environment:
-      android_sdk: "35"
       java: 17
     scripts:
       - name: Gradlew executable
         script: chmod +x ./gradlew
+      - name: Set Android SDK location
+        script: |
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/local.properties"
       - name: Build debug APK
         script: ./gradlew assembleDebug --stacktrace
     artifacts:
