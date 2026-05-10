@@ -43,10 +43,10 @@
 					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
 					<key>UISceneStoryboardFile</key>
 					<string>Main</string>
-				</dict>
+				`t<key>NSCameraUsageDescription</key>`r`n`t<string>Appen bruger kameraet til at tage billeder af plakater.</string>`r`n`t<key>NSLocationWhenInUseUsageDescription</key>`r`n`t<string>Appen bruger lokation til at gemme plakaters position og vise afstand.</string>`r`n</dict>
 			</array>
-		</dict>
-	</dict>
+		`t<key>NSCameraUsageDescription</key>`r`n`t<string>Appen bruger kameraet til at tage billeder af plakater.</string>`r`n`t<key>NSLocationWhenInUseUsageDescription</key>`r`n`t<string>Appen bruger lokation til at gemme plakaters position og vise afstand.</string>`r`n</dict>
+	`t<key>NSCameraUsageDescription</key>`r`n`t<string>Appen bruger kameraet til at tage billeder af plakater.</string>`r`n`t<key>NSLocationWhenInUseUsageDescription</key>`r`n`t<string>Appen bruger lokation til at gemme plakaters position og vise afstand.</string>`r`n</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
@@ -66,5 +66,5 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-</dict>
+`t<key>NSCameraUsageDescription</key>`r`n`t<string>Appen bruger kameraet til at tage billeder af plakater.</string>`r`n`t<key>NSLocationWhenInUseUsageDescription</key>`r`n`t<string>Appen bruger lokation til at gemme plakaters position og vise afstand.</string>`r`n</dict>
 </plist>
