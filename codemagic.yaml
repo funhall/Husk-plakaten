@@ -1,0 +1,18 @@
+# Codemagic: Kotlin Android app — debug APK til test på telefon
+# Efter push: vælg workflow "huskplakaten-android-debug" og branch backup/testet-android-2026-05-10
+
+workflows:
+  huskplakaten-android-debug:
+    name: Husk Plakaten Android (Kotlin debug APK)
+    max_build_duration: 60
+    instance_type: linux_x2
+    environment:
+      android_sdk: "35"
+      java: 17
+    scripts:
+      - name: Gradlew executable
+        script: chmod +x ./gradlew
+      - name: Build debug APK
+        script: ./gradlew assembleDebug --stacktrace
+    artifacts:
+      - app/build/outputs/**/*.apk
