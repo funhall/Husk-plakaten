@@ -47,16 +47,23 @@ workflows:
         script: |
           cd ios && pod install
       - name: Flutter build IPA (release)
-        script: flutter build ipa --release
+        # Codemagic: use-profiles skriver /Users/builder/export_options.plist — uden den får man ofte kun .xcarchive, ingen .ipa
+        script: |
+          flutter build ipa --release \
+            --export-options-plist=/Users/builder/export_options.plist
       - name: Stage IPA into repo root out/ for artifact pickup
         script: |
           mkdir -p "$CM_BUILD_DIR/out"
-          if ! ls build/ios/ipa/*.ipa 1> /dev/null 2>&1; then
-            echo "No .ipa under build/ios/ipa — listing build/ios for debug:"
-            find build/ios -type f 2>/dev/null | head -80 || true
+          n=0
+          while IFS= read -r -d '' f; do
+            cp "$f" "$CM_BUILD_DIR/out/"
+            n=$((n+1))
+          done < <(find build/ios -name "*.ipa" -type f -print0 2>/dev/null)
+          if [ "$n" -eq 0 ]; then
+            echo "Ingen .ipa fundet. Tjek at export_options.plist bruges (se trinnet forinden)."
+            find build/ios -maxdepth 4 \( -name "*.ipa" -o -name "*.xcarchive" \) 2>/dev/null
             exit 1
           fi
-          cp build/ios/ipa/*.ipa "$CM_BUILD_DIR/out/"
           ls -la "$CM_BUILD_DIR/out/"
     artifacts:
       - out/*.ipa
