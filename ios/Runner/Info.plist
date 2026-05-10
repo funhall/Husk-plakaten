@@ -30,6 +30,8 @@
 	<string>Appen bruger kameraet til at tage billeder af plakater.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Appen bruger lokation til at gemme plakaters position og vise afstand.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Appen bruger lokation til at advisere, naar du er taet paa en plakat, du skal tage ned.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
