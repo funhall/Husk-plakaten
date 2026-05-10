@@ -23,6 +23,8 @@ workflows:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: dk.funhall.huskmig
+    integrations:
+      app_store_connect: "HuskMig-ASC-Key"
     scripts:
       - flutter pub get
       - name: CocoaPods
