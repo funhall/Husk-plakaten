@@ -27,8 +27,8 @@ workflows:
       - flutter pub get
       - name: CocoaPods
         script: cd ios && pod install
-      - name: Apply provisioning profiles (Flutter workspace)
-        script: xcode-project use-profiles --workspace ios/Runner.xcworkspace --scheme Runner
+      - name: Apply provisioning profiles to Xcode project
+        script: xcode-project use-profiles --project ios/Runner.xcodeproj --archive-method app-store
       - flutter build ipa --release
     artifacts:
       - build/ios/ipa/*.ipa
