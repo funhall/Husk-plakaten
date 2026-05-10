@@ -2,6 +2,7 @@
 # Branch: release/rigtig-version (og backup/testet-android-2026-05-10 når den matcher).
 # Android: Kotlin i roden (gradlew).
 # iOS: Flutter ligger i flutter_app/ (pubspec.yaml + ios/) så det ikke kolliderer med Android-projektet i roden.
+# Når working_directory er flutter_app, skal artifacts være relative til den mappe (build/ios/ipa/...), se Codemagic monorepo-dokumentation.
 
 workflows:
   huskplakaten-android-debug:
@@ -46,4 +47,4 @@ workflows:
       - name: Flutter build IPA (release)
         script: flutter build ipa --release
     artifacts:
-      - flutter_app/build/ios/ipa/*.ipa
+      - build/ios/ipa/**/*.ipa
