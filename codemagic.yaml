@@ -3,8 +3,8 @@
 # Android: Kotlin i roden (gradlew).
 # iOS: Flutter ligger i flutter_app/ (pubspec.yaml + ios/) så det ikke kolliderer med Android-projektet i roden.
 #
-# Artifact-stier må ikke ligge i gitignorerede mapper (.gitignore). Kopier derfor til codemagic_ipa/
-# og evt. CM_EXPORT_DIR ifølge Codemagic built-in env vars.
+# IPA kopieres til $CM_BUILD_DIR/codemagic_ipa (repo-rod). Med working_directory: flutter_app skal
+# artifact-mønstre bruge $CM_BUILD_DIR, ellers søger Codemagic fejl i flutter_app/codemagic_ipa/.
 #
 # App Store Connect upload: Bruger Codemagic-integrationen med Apple API-nøgle (samme som signing).
 # Navnet skal matche Team settings → Apple Developer Portal (her: HuskMig-ASC-Key).
@@ -72,13 +72,8 @@ workflows:
             exit 1
           fi
           ls -la "$STAGING"
-          if [ -n "${CM_EXPORT_DIR:-}" ]; then
-            mkdir -p "$CM_EXPORT_DIR"
-            cp "$STAGING"/*.ipa "$CM_EXPORT_DIR/"
-            ls -la "$CM_EXPORT_DIR"
-          fi
     artifacts:
-      - codemagic_ipa/*.ipa
+      - "$CM_BUILD_DIR/codemagic_ipa/*.ipa"
     publishing:
       app_store_connect:
         auth: integration
