@@ -37,4 +37,8 @@ workflows:
     publishing:
       app_store_connect:
         auth: integration
+        integration: HuskMig-ASC-Key
         submit_to_testflight: true
+        submit_to_app_store: false
+        beta_groups:
+          - Internal
