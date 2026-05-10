@@ -1,10 +1,7 @@
 # Codemagic — officielle workflows for release-linjen (uden brug af main).
 # Branch: release/rigtig-version (og backup/testet-android-2026-05-10 når den matcher).
-# 1) Kotlin Android debug APK — kræver app/ + Gradle.
-#
-# Flutter iOS IPA er ikke defineret her: denne branch har kun native Android (ingen pubspec.yaml / ios/).
-# Når et Flutter-projekt merges til roden, kan workflow "huskplakaten-flutter-ios" tilføjes igen med
-# flutter pub get → pod install → flutter build ipa — se git-historik.
+# Android: Kotlin i roden (gradlew).
+# iOS: Flutter ligger i flutter_app/ (pubspec.yaml + ios/) så det ikke kolliderer med Android-projektet i roden.
 
 workflows:
   huskplakaten-android-debug:
@@ -23,3 +20,28 @@ workflows:
         script: ./gradlew assembleDebug --stacktrace
     artifacts:
       - app/build/outputs/**/*.apk
+
+  huskplakaten-flutter-ios:
+    name: Husk Plakaten iOS (Flutter IPA)
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    working_directory: flutter_app
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: dk.funhall.huskmig
+    scripts:
+      - name: Set up code signing on Xcode project
+        script: xcode-project use-profiles
+      - name: Flutter pub get
+        script: flutter pub get
+      - name: CocoaPods install
+        script: |
+          cd ios && pod install
+      - name: Flutter build IPA (release)
+        script: flutter build ipa --release
+    artifacts:
+      - flutter_app/build/ios/ipa/*.ipa
