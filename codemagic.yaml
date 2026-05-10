@@ -2,7 +2,9 @@
 # Branch: release/rigtig-version (og backup/testet-android-2026-05-10 når den matcher).
 # Android: Kotlin i roden (gradlew).
 # iOS: Flutter ligger i flutter_app/ (pubspec.yaml + ios/) så det ikke kolliderer med Android-projektet i roden.
-# Når working_directory er flutter_app, skal artifacts være relative til den mappe (build/ios/ipa/...), se Codemagic monorepo-dokumentation.
+#
+# Artifact-mønstre er relative til clone-roden (CM_BUILD_DIR), jf. Codemagic-dokumentation — ikke til working_directory.
+# Vi kopierer derfor .ipa til out/ efter build, så Publishing altid har et forudsigeligt mønster.
 
 workflows:
   huskplakaten-android-debug:
@@ -46,5 +48,16 @@ workflows:
           cd ios && pod install
       - name: Flutter build IPA (release)
         script: flutter build ipa --release
+      - name: Stage IPA into repo root out/ for artifact pickup
+        script: |
+          mkdir -p "$CM_BUILD_DIR/out"
+          if ! ls build/ios/ipa/*.ipa 1> /dev/null 2>&1; then
+            echo "No .ipa under build/ios/ipa — listing build/ios for debug:"
+            find build/ios -type f 2>/dev/null | head -80 || true
+            exit 1
+          fi
+          cp build/ios/ipa/*.ipa "$CM_BUILD_DIR/out/"
+          ls -la "$CM_BUILD_DIR/out/"
     artifacts:
-      - build/ios/ipa/**/*.ipa
+      - out/*.ipa
+      - flutter_app/build/ios/ipa/**/*.ipa

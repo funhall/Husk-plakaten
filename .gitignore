@@ -3,3 +3,6 @@
 local.properties
 **/build/
 *.iml
+
+# CI staging directory (Codemagic copies .ipa here before artifact publish)
+/out/
