@@ -5,6 +5,11 @@
 #
 # Artifact-stier må ikke ligge i gitignorerede mapper (.gitignore). Kopier derfor til codemagic_ipa/
 # og evt. CM_EXPORT_DIR ifølge Codemagic built-in env vars.
+#
+# App Store Connect auto-upload: Opret i Codemagic → Environment variables → gruppen `appstore_credentials`
+# med hemmelighederne APP_STORE_CONNECT_PRIVATE_KEY (.p8 indhold), APP_STORE_CONNECT_KEY_IDENTIFIER (Key ID),
+# APP_STORE_CONNECT_ISSUER_ID (Issuer ID). API-nøgle i Apple skal have mindst App Manager.
+# Alternativ: Team integrations → Apple Developer Portal + integrations/app_store_connect i yaml med auth: integration.
 
 workflows:
   huskplakaten-android-debug:
@@ -30,6 +35,8 @@ workflows:
     instance_type: mac_mini_m2
     working_directory: flutter_app
     environment:
+      groups:
+        - appstore_credentials
       flutter: stable
       xcode: latest
       cocoapods: default
@@ -74,3 +81,10 @@ workflows:
           fi
     artifacts:
       - codemagic_ipa/*.ipa
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: true
+        expire_build_submitted_for_review: false
