@@ -1,7 +1,15 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("com.google.devtools.ksp")
+}
+
+val appVersion = Properties().apply {
+    val f = rootProject.file("version.properties")
+    require(f.exists()) { "version.properties mangler i projektroden (VERSION_NAME / VERSION_CODE)." }
+    f.reader().use(::load)
 }
 
 android {
@@ -12,8 +20,8 @@ android {
         applicationId = "dk.huskplakaten.app"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = appVersion.getProperty("VERSION_CODE").toInt()
+        versionName = appVersion.getProperty("VERSION_NAME")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

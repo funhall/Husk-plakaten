@@ -36,6 +36,8 @@ workflows:
     scripts:
       - name: Set up code signing on Xcode project
         script: xcode-project use-profiles
+      - name: Sync Flutter version from version.properties
+        script: dart "$CM_BUILD_DIR/scripts/sync_app_version.dart"
       - name: Flutter pub get
         script: flutter pub get
       - name: CocoaPods install
