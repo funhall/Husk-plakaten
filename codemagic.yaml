@@ -1,4 +1,4 @@
-﻿workflows:
+workflows:
   flutter_android_debug:
     name: Flutter Android Debug
     max_build_duration: 60
