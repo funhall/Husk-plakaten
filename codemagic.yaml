@@ -21,6 +21,7 @@ workflows:
     artifacts:
       - app/build/outputs/**/*.apk
 
+  # iOS: Skal matche App Store Connect (her: dk.funhall.huskmig — ikke Android applicationId).
   huskplakaten-flutter-ios:
     name: Husk Plakaten iOS (Flutter IPA)
     max_build_duration: 120
@@ -31,7 +32,7 @@ workflows:
       cocoapods: default
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: dk.huskplakaten.app
+        bundle_identifier: dk.funhall.huskmig
     scripts:
       - name: Set up code signing on Xcode project
         script: xcode-project use-profiles
