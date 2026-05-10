@@ -1,27 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-
-    <path
-        android:fillColor="#1F3A8A"
-        android:pathData="M28,22h44c5.5,0 10,4.5 10,10v44c0,5.5 -4.5,10 -10,10H28c-5.5,0 -10,-4.5 -10,-10V32c0,-5.5 4.5,-10 10,-10z" />
-
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M30,30h40c2.2,0 4,1.8 4,4v34H34c-2.2,0 -4,-1.8 -4,-4V30z" />
-
-    <path
-        android:fillColor="#E2E8F0"
-        android:pathData="M74,68v8c0,2.2 -1.8,4 -4,4H62z" />
-
-    <path
-        android:fillColor="#34D399"
-        android:pathData="M70,66c0,8.8 -7.2,16 -16,16s-16,-7.2 -16,-16 7.2,-16 16,-16 16,7.2 16,16z" />
-
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M48,66l4.5,4.5L61,62l3,3-11.5,11.5L45,69z" />
-</vector>
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:insetLeft="18dp"
+    android:insetTop="18dp"
+    android:insetRight="18dp"
+    android:insetBottom="18dp">
+    <bitmap
+        android:gravity="center"
+        android:src="@drawable/ic_launcher_foreground_image" />
+</inset>

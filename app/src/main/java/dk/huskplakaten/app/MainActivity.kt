@@ -43,14 +43,21 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AddAPhoto
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.List
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Place
+import androidx.compose.material3.Icon
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -82,6 +89,13 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import com.facebook.AccessToken
+import com.facebook.CallbackManager
+import com.facebook.FacebookCallback
+import com.facebook.FacebookException
+import com.facebook.GraphRequest
+import com.facebook.login.LoginManager
+import com.facebook.login.LoginResult
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
@@ -92,6 +106,7 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
@@ -110,8 +125,32 @@ import kotlin.math.roundToInt
 import androidx.compose.ui.window.Dialog
 
 class MainActivity : ComponentActivity() {
+    private lateinit var facebookCallbackManager: CallbackManager
+    private var pendingFacebookSuccess: ((String, String?) -> Unit)? = null
+    private var pendingFacebookError: ((String) -> Unit)? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        facebookCallbackManager = CallbackManager.Factory.create()
+        LoginManager.getInstance().registerCallback(
+            facebookCallbackManager,
+            object : FacebookCallback<LoginResult> {
+                override fun onSuccess(result: LoginResult) {
+                    val token = result.accessToken
+                    fetchFacebookEmail(token) { email ->
+                        pendingFacebookSuccess?.invoke(token.userId.orEmpty(), email)
+                    }
+                }
+
+                override fun onCancel() {
+                    pendingFacebookError?.invoke(getString(R.string.facebook_login_cancelled))
+                }
+
+                override fun onError(error: FacebookException) {
+                    pendingFacebookError?.invoke(error.message ?: getString(R.string.facebook_login_failed))
+                }
+            }
+        )
         setContent {
             HuskPlakatenTheme {
                 val appContext = applicationContext
@@ -132,7 +171,17 @@ class MainActivity : ComponentActivity() {
                                 .onSuccess { session = it }
                                 .onFailure { throw it }
                         },
-                        onGoogleLogin = { session = sessionStore.loginWithGooglePlaceholder() }
+                        onGoogleLogin = { session = sessionStore.loginWithGooglePlaceholder() },
+                        onFacebookLogin = { onError ->
+                            pendingFacebookSuccess = { facebookUserId, facebookEmail ->
+                                session = sessionStore.loginWithFacebook(facebookUserId, facebookEmail)
+                            }
+                            pendingFacebookError = onError
+                            LoginManager.getInstance().logInWithReadPermissions(
+                                this@MainActivity,
+                                listOf("public_profile", "email")
+                            )
+                        }
                     )
                 } else {
                     PlakatHomeScreen(
@@ -150,12 +199,31 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        facebookCallbackManager.onActivityResult(requestCode, resultCode, data)
+    }
+
+    private fun fetchFacebookEmail(accessToken: AccessToken, onResult: (String?) -> Unit) {
+        val request = GraphRequest.newMeRequest(accessToken) { jsonObject, _ ->
+            val email = jsonObject
+                ?.optString("email")
+                ?.takeIf { it.isNotBlank() }
+            onResult(email)
+        }
+        request.parameters = Bundle().apply {
+            putString("fields", "id,name,email")
+        }
+        request.executeAsync()
+    }
 }
 
 @Composable
 private fun LoginScreen(
     onEmailLogin: (String, String) -> Unit,
-    onGoogleLogin: () -> Unit
+    onGoogleLogin: () -> Unit,
+    onFacebookLogin: ((String) -> Unit) -> Unit
 ) {
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
@@ -197,6 +265,9 @@ private fun LoginScreen(
         }
         TextButton(onClick = onGoogleLogin) {
             Text(stringResource(R.string.login_with_google_placeholder))
+        }
+        TextButton(onClick = { onFacebookLogin { errorMessage -> error = errorMessage } }) {
+            Text(stringResource(R.string.login_with_facebook))
         }
         if (error != null) {
             Text(text = error!!, style = MaterialTheme.typography.bodySmall)
@@ -476,7 +547,48 @@ fun PlakatHomeScreen(
     }
 
     Scaffold(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier.fillMaxSize(),
+        bottomBar = {
+            NavigationBar {
+                NavigationBarItem(
+                    selected = !showMap && !showRemovedArchive && !showEconomyScreen,
+                    onClick = {
+                        showMap = false
+                        showRemovedArchive = false
+                        showEconomyScreen = false
+                    },
+                    icon = { Icon(Icons.Outlined.Home, contentDescription = null) },
+                    label = { Text(stringResource(R.string.nav_overview)) }
+                )
+                NavigationBarItem(
+                    selected = false,
+                    onClick = { launchCaptureFlow(CaptureMode.ADD) },
+                    icon = { Icon(Icons.Outlined.AddAPhoto, contentDescription = null) },
+                    label = { Text(stringResource(R.string.nav_new_poster)) }
+                )
+                NavigationBarItem(
+                    selected = showMap,
+                    onClick = {
+                        selectedPlakatId = null
+                        showMap = true
+                        showRemovedArchive = false
+                        showEconomyScreen = false
+                    },
+                    icon = { Icon(Icons.Outlined.List, contentDescription = null) },
+                    label = { Text(stringResource(R.string.nav_my_posters)) }
+                )
+                NavigationBarItem(
+                    selected = showEconomyScreen,
+                    onClick = {
+                        showMap = false
+                        showRemovedArchive = false
+                        showEconomyScreen = true
+                    },
+                    icon = { Icon(Icons.Outlined.Person, contentDescription = null) },
+                    label = { Text(stringResource(R.string.nav_profile)) }
+                )
+            }
+        }
     ) { innerPadding ->
         if (showMap) {
             PlakatMapScreen(
@@ -507,7 +619,20 @@ fun PlakatHomeScreen(
             EconomyScreen(
                 session = session,
                 registeredCount = registeredCount,
+                removedCount = removedItems.size,
+                selectedPartyThemeKey = selectedPartyThemeKey,
                 onBack = { showEconomyScreen = false },
+                onSelectPartyTheme = { selectedPartyThemeKey = it },
+                onOpenActivePosters = {
+                    showEconomyScreen = false
+                    showMap = true
+                    showRemovedArchive = false
+                },
+                onOpenRemovedArchive = {
+                    showEconomyScreen = false
+                    showRemovedArchive = true
+                },
+                onLogout = onLogout,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
@@ -535,121 +660,28 @@ fun PlakatHomeScreen(
             )
         } else {
             LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 110.dp),
+                columns = GridCells.Fixed(4),
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .padding(horizontal = 12.dp, vertical = 12.dp)
+                    .padding(horizontal = 12.dp, vertical = 4.dp)
             ) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    var showQuickMenu by remember { mutableStateOf(false) }
-                    var showThemeSubMenu by remember { mutableStateOf(false) }
                     Column {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = selectedPartyTheme.primary.copy(alpha = 0.12f)
-                            )
-                        ) {
-                            Column(modifier = Modifier.padding(14.dp)) {
-                                Text(
-                                    text = stringResource(R.string.home_title),
-                                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = selectedPartyTheme.primary,
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = stringResource(R.string.home_subtitle),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                                Spacer(modifier = Modifier.height(10.dp))
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.End,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Box {
-                                        TextButton(
-                                            onClick = { showQuickMenu = true },
-                                            colors = ButtonDefaults.textButtonColors(
-                                                contentColor = selectedPartyTheme.primary
-                                            )
-                                        ) {
-                                            Text(text = stringResource(R.string.menu_label))
-                                        }
-                                        DropdownMenu(
-                                            expanded = showQuickMenu,
-                                            onDismissRequest = {
-                                                showQuickMenu = false
-                                                showThemeSubMenu = false
-                                            }
-                                        ) {
-                                            if (!showThemeSubMenu) {
-                                                DropdownMenuItem(
-                                                    text = { Text(stringResource(R.string.account_logged_in_as, session.email)) },
-                                                    onClick = {}
-                                                )
-                                                DropdownMenuItem(
-                                                    text = { Text(stringResource(R.string.open_economy_page)) },
-                                                    onClick = {
-                                                        showQuickMenu = false
-                                                        showEconomyScreen = true
-                                                    }
-                                                )
-                                                DropdownMenuItem(
-                                                    text = { Text(stringResource(R.string.home_list_title, items.size)) },
-                                                    onClick = {}
-                                                )
-                                                DropdownMenuItem(
-                                                    text = { Text(stringResource(R.string.menu_political_theme_title)) },
-                                                    onClick = { showThemeSubMenu = true }
-                                                )
-                                                if (removedItems.isNotEmpty()) {
-                                                    DropdownMenuItem(
-                                                        text = { Text(stringResource(R.string.open_removed_archive, removedItems.size)) },
-                                                        onClick = {
-                                                            showQuickMenu = false
-                                                            showRemovedArchive = true
-                                                        }
-                                                    )
-                                                }
-                                                DropdownMenuItem(
-                                                    text = { Text(stringResource(R.string.logout_cta)) },
-                                                    onClick = {
-                                                        showQuickMenu = false
-                                                        onLogout()
-                                                    }
-                                                )
-                                            } else {
-                                                DropdownMenuItem(
-                                                    text = { Text(stringResource(R.string.menu_back)) },
-                                                    onClick = { showThemeSubMenu = false }
-                                                )
-                                                PartyTheme.entries.forEach { theme ->
-                                                    DropdownMenuItem(
-                                                        text = {
-                                                            val prefix = if (theme.key == selectedPartyThemeKey) "\u2713 " else ""
-                                                            Text(prefix + theme.displayName)
-                                                        },
-                                                        onClick = {
-                                                            selectedPartyThemeKey = theme.key
-                                                            showThemeSubMenu = false
-                                                        }
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = stringResource(R.string.home_title),
+                            style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.Bold),
+                            color = selectedPartyTheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = stringResource(R.string.home_subtitle),
+                            style = MaterialTheme.typography.titleLarge,
+                            textAlign = TextAlign.Start,
+                            maxLines = 2,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
                         if (session.billingActive) {
                             Button(
                                 onClick = { launchCaptureFlow(CaptureMode.ADD) },
@@ -659,10 +691,18 @@ fun PlakatHomeScreen(
                                     contentColor = Color.White
                                 )
                             ) {
-                                Text(
-                                    text = stringResource(R.string.home_primary_action),
-                                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Place,
+                                        contentDescription = null,
+                                        tint = Color.White
+                                    )
+                                    Spacer(modifier = Modifier.size(8.dp))
+                                    Text(
+                                        text = stringResource(R.string.home_primary_action),
+                                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                                    )
+                                }
                             }
                         } else {
                             Button(
@@ -682,23 +722,93 @@ fun PlakatHomeScreen(
                         ) {
                             Text(text = stringResource(R.string.refresh_distances))
                         }
-                        if (items.isNotEmpty()) {
-                            TextButton(
-                                onClick = {
-                                    if (!ensureMapsKeyConfigured()) {
-                                        return@TextButton
-                                    }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Card(
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Text(text = stringResource(R.string.stat_collected), style = MaterialTheme.typography.bodySmall)
+                                    Text(
+                                        text = registeredCount.toString(),
+                                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+                                    )
+                                }
+                            }
+                            Card(
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Text(text = stringResource(R.string.stat_active), style = MaterialTheme.typography.bodySmall)
+                                    Text(
+                                        text = items.size.toString(),
+                                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+                                    )
+                                }
+                            }
+                            Card(
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Text(text = stringResource(R.string.stat_removed), style = MaterialTheme.typography.bodySmall)
+                                    Text(
+                                        text = removedItems.size.toString(),
+                                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(170.dp)
+                                .clickable {
+                                    if (!ensureMapsKeyConfigured()) return@clickable
                                     selectedPlakatId = null
                                     showMap = true
                                 },
-                                colors = ButtonDefaults.textButtonColors(contentColor = selectedPartyTheme.primary)
+                            shape = RoundedCornerShape(14.dp)
+                        ) {
+                            val previewCenter = activeItemsWithDistance.firstOrNull()?.first?.let { LatLng(it.latitude, it.longitude) }
+                                ?: LatLng(55.6761, 12.5683)
+                            val previewCameraState = rememberCameraPositionState {
+                                position = CameraPosition.fromLatLngZoom(previewCenter, 12.5f)
+                            }
+                            var previewMapLoaded by remember { mutableStateOf(false) }
+                            LaunchedEffect(previewMapLoaded, activeItemsWithDistance) {
+                                if (!previewMapLoaded) return@LaunchedEffect
+                                if (activeItemsWithDistance.isNotEmpty()) {
+                                    val boundsBuilder = LatLngBounds.builder()
+                                    activeItemsWithDistance.forEach { entry ->
+                                        boundsBuilder.include(LatLng(entry.first.latitude, entry.first.longitude))
+                                    }
+                                    previewCameraState.animate(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 120))
+                                }
+                            }
+                            GoogleMap(
+                                modifier = Modifier.fillMaxSize(),
+                                cameraPositionState = previewCameraState,
+                                onMapLoaded = { previewMapLoaded = true }
                             ) {
-                                Text(stringResource(R.string.show_on_map))
+                                activeItemsWithDistance.take(8).forEach { entry ->
+                                    val poster = entry.first
+                                    Marker(state = MarkerState(position = LatLng(poster.latitude, poster.longitude)))
+                                }
                             }
                         }
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = stringResource(R.string.home_list_title, items.size),
+                            text = stringResource(R.string.recent_posters_title),
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = selectedPartyTheme.primary
                         )
@@ -709,16 +819,13 @@ fun PlakatHomeScreen(
                 items(activeItemsWithDistance, key = { it.first.id }) { entry ->
                     val item = entry.first
                     val distanceMeters = entry.second
-                    val canMarkRemoved = distanceMeters == null || distanceMeters <= REMOVE_ALLOWED_DISTANCE_METERS
+                    val canMarkRemoved = distanceMeters != null && distanceMeters <= REMOVE_ALLOWED_DISTANCE_METERS
                     PlakatTile(
                         item = item,
                         onDelete = { vm.delete(item) },
                         onShowOnMap = {
-                            if (!ensureMapsKeyConfigured()) {
-                                return@PlakatTile
-                            }
                             selectedPlakatId = item.id
-                            showMap = true
+                            if (ensureMapsKeyConfigured()) showMap = true
                         },
                         onNavigate = {
                             startRouteNavigation(context, item.latitude, item.longitude)
@@ -726,13 +833,14 @@ fun PlakatHomeScreen(
                         onMarkRemoved = if (session.billingActive) {
                             { launchCaptureFlow(CaptureMode.REMOVE, item.id) }
                         } else {
-                            null
+                            { launchCaptureFlow(CaptureMode.REMOVE, item.id) }
                         },
                         accentColor = selectedPartyTheme.primary,
                         distanceMeters = distanceMeters,
                         showNearbyBadge = canMarkRemoved,
                         markRemovedEnabled = canMarkRemoved,
-                        modifier = Modifier.padding(4.dp)
+                        compactMode = true,
+                        modifier = Modifier.padding(3.dp)
                     )
                 }
 
@@ -788,13 +896,47 @@ private fun RemovedPlakaterScreen(
 private fun EconomyScreen(
     session: AuthSession,
     registeredCount: Int,
+    removedCount: Int,
+    selectedPartyThemeKey: String,
     onBack: () -> Unit,
+    onSelectPartyTheme: (String) -> Unit,
+    onOpenActivePosters: () -> Unit,
+    onOpenRemovedArchive: () -> Unit,
+    onLogout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showThemeOptions by remember { mutableStateOf(false) }
     val estimatedPrice = formatKroner(registeredCount)
     Column(modifier = modifier) {
-        TextButton(onClick = onBack) {
-            Text(text = stringResource(R.string.back_to_active_posters))
+        Text(
+            text = stringResource(R.string.account_logged_in_as, session.email),
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Button(
+            onClick = onOpenActivePosters,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(stringResource(R.string.home_list_title, registeredCount))
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Button(
+            onClick = { showThemeOptions = !showThemeOptions },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(stringResource(R.string.menu_political_theme_title))
+        }
+        if (showThemeOptions) {
+            Spacer(modifier = Modifier.height(6.dp))
+            PartyTheme.entries.forEach { theme ->
+                val prefix = if (theme.key == selectedPartyThemeKey) "\u2713 " else ""
+                TextButton(
+                    onClick = { onSelectPartyTheme(theme.key) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(prefix + theme.displayName)
+                }
+            }
         }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
@@ -842,6 +984,22 @@ private fun EconomyScreen(
                 )
             }
         }
+        if (removedCount > 0) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Button(
+                onClick = onOpenRemovedArchive,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(stringResource(R.string.open_removed_archive, removedCount))
+            }
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        Button(
+            onClick = onLogout,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(stringResource(R.string.logout_cta))
+        }
     }
 }
 
@@ -859,6 +1017,7 @@ private fun PlakatMapScreen(
     modifier: Modifier = Modifier
 ) {
     var showMarkerDetails by remember { mutableStateOf(false) }
+    var mapLoaded by remember { mutableStateOf(false) }
     val fallbackCenter = LatLng(55.6761, 12.5683)
     val selectedItem = items.firstOrNull { it.id == selectedPlakatId }
     val startCenter = selectedItem?.let { LatLng(it.latitude, it.longitude) }
@@ -868,30 +1027,28 @@ private fun PlakatMapScreen(
         position = CameraPosition.fromLatLngZoom(startCenter, if (items.isEmpty()) 6f else 18f)
     }
 
-    LaunchedEffect(selectedPlakatId, items.size) {
-        val target = selectedItem?.let { LatLng(it.latitude, it.longitude) } ?: return@LaunchedEffect
-        cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(target, 15f))
+    LaunchedEffect(mapLoaded, selectedPlakatId, items) {
+        if (!mapLoaded) return@LaunchedEffect
+        val target = selectedItem?.let { LatLng(it.latitude, it.longitude) }
+        if (target != null) {
+            cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(target, 15f))
+            return@LaunchedEffect
+        }
+
+        if (items.isNotEmpty()) {
+            val boundsBuilder = LatLngBounds.builder()
+            items.forEach { boundsBuilder.include(LatLng(it.latitude, it.longitude)) }
+            val bounds = boundsBuilder.build()
+            cameraPositionState.animate(CameraUpdateFactory.newLatLngBounds(bounds, 140))
+        }
     }
 
     Column(modifier = modifier) {
-        Row(modifier = Modifier.fillMaxWidth()) {
-            TextButton(onClick = onBack) {
-                Text(stringResource(R.string.map_back_to_list))
-            }
-            if (selectedItem != null) {
-                TextButton(
-                    onClick = { onNavigate(selectedItem) },
-                    colors = ButtonDefaults.textButtonColors(contentColor = accentColor)
-                ) {
-                    Text(stringResource(R.string.route_to_poster))
-                }
-            }
-        }
         GoogleMap(
             modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            cameraPositionState = cameraPositionState
+                .fillMaxSize(),
+            cameraPositionState = cameraPositionState,
+            onMapLoaded = { mapLoaded = true }
         ) {
             items.forEach { item ->
                 val isNearby = currentUserLocation?.let {
@@ -1027,6 +1184,7 @@ private fun PlakatTile(
     distanceMeters: Float?,
     showNearbyBadge: Boolean,
     markRemovedEnabled: Boolean = true,
+    compactMode: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var showDetailsDialog by remember(item.id) { mutableStateOf(false) }
@@ -1071,13 +1229,13 @@ private fun PlakatTile(
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
-                        .size(112.dp)
+                        .size(if (compactMode) 78.dp else 112.dp)
                         .graphicsLayer(scaleX = imageScale, scaleY = imageScale)
                         .clip(RoundedCornerShape(12.dp))
                         .clickable { showDetailsDialog = true }
                 )
             }
-            if (!isRemovedItem) {
+            if (!compactMode && !isRemovedItem) {
                 val compactDistanceText = when {
                     distanceMeters == null -> stringResource(R.string.distance_unknown)
                     distanceMeters < 1000f -> stringResource(R.string.distance_meters, distanceMeters.roundToInt())
@@ -1088,12 +1246,34 @@ private fun PlakatTile(
                     style = MaterialTheme.typography.bodySmall
                 )
             }
-            Text(
-                text = dateText,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            if (!isRemovedItem && markRemovedEnabled && onMarkRemoved != null) {
+            if (compactMode && !isRemovedItem) {
+                val compactDistanceText = when {
+                    distanceMeters == null -> stringResource(R.string.distance_unknown)
+                    distanceMeters < 1000f -> stringResource(R.string.distance_meters, distanceMeters.roundToInt())
+                    else -> stringResource(R.string.distance_km, distanceMeters / 1000f)
+                }
+                Text(
+                    text = compactDistanceText,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (!compactMode) {
+                Text(
+                    text = dateText,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (compactMode && !isRemovedItem && showNearbyBadge && markRemovedEnabled && onMarkRemoved != null) {
+                TextButton(
+                    onClick = onMarkRemoved,
+                    colors = ButtonDefaults.textButtonColors(contentColor = accentColor)
+                ) {
+                    Text(text = stringResource(R.string.mark_removed))
+                }
+            }
+            if (!isRemovedItem && markRemovedEnabled && onMarkRemoved != null && !compactMode) {
                 TextButton(
                     onClick = onMarkRemoved,
                     colors = ButtonDefaults.textButtonColors(contentColor = accentColor)

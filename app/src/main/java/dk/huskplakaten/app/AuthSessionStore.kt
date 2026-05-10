@@ -35,8 +35,32 @@ class AuthSessionStore(context: Context) {
     fun loginWithGooglePlaceholder(): AuthSession {
         val email = "google.user@placeholder.local"
         val session = AuthSession(
-            userId = "google_${UUID.randomUUID()}",
+            userId = "google_local_user",
             email = email,
+            billingActive = prefs.getBoolean(KEY_BILLING_ACTIVE, false)
+        )
+        save(session)
+        return session
+    }
+
+    fun loginWithFacebookPlaceholder(): AuthSession {
+        val email = "facebook.user@placeholder.local"
+        val session = AuthSession(
+            userId = "facebook_local_user",
+            email = email,
+            billingActive = prefs.getBoolean(KEY_BILLING_ACTIVE, false)
+        )
+        save(session)
+        return session
+    }
+
+    fun loginWithFacebook(userId: String, email: String?): AuthSession {
+        val normalizedUserId = userId.ifBlank { "facebook_${UUID.randomUUID()}" }
+        val resolvedEmail = email?.trim()?.takeIf { it.contains("@") }
+            ?: "facebook.user.$normalizedUserId@facebook.local"
+        val session = AuthSession(
+            userId = "facebook_$normalizedUserId",
+            email = resolvedEmail,
             billingActive = prefs.getBoolean(KEY_BILLING_ACTIVE, false)
         )
         save(session)
